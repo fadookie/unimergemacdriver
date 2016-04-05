@@ -23,7 +23,8 @@
 #	driver = ../merge-unity.sh %A %B 
 #
 #
-
+set -o nounset
+set -o errexit
 
 #Check number of arguments
 if [ "$#" -ne 2 ]; then
@@ -35,33 +36,40 @@ sMyDoc=$1
 sTheirDoc=$2
 
 # Absolute path to this script, e.g. /home/user/bin/foo.sh
-Script=$(readlink -f "$0")
+realpath() {
+    [[ $1 = /* ]] && echo "$1" || echo "$PWD/${1#./}"
+}
+
+Script=$(realpath "$0")
 # Absolute path this script is in, thus /home/user/bin
 ScriptPath=$(dirname "$Script")
-ProjectPath="${ScriptPath}/../"
+ProjectPath="${ScriptPath}/"
 
+echo "merge-unity.sh: START, Args: $@ ScriptPath='$ScriptPath' ProjectPath:'$ProjectPath'"
 
 #If my doc is not in project path, copy to project
-if ["$sMyDoc" != "$ProjectPath*"]; then
-	if[-f "$sMyDoc"]; then
+if [ "$sMyDoc" != "$ProjectPath*" ]; then
+	if [ -f "$sMyDoc" ]; then
 		IFS='/' read -a sourceArray <<< "$sMyDoc"
-		if [-f "$ProjectPath${sourceArray[-1]}"]; then
-			echo "Cannot copy  $sMyDoc  to  $ProjectPath ${sourceArray[-1]}  because the destination file exists."
+        mergeFile="${sourceArray[${#sourceArray[@]} - 1]}"
+		if [ -f "$ProjectPath${mergeFile}" ]; then
+			echo "Cannot copy  $sMyDoc  to  $ProjectPath ${mergeFile}  because the destination file exists."
 		else
-			mv "$sMyDoc" "$ProjectPath${sourceArray[-1]}"
+			mv -v "$sMyDoc" "$ProjectPath${mergeFile}"
 		fi
 	fi
 fi
 
 
 #If their doc is not in project path, copy to project
-if ["$sTheirDoc" != "$ProjectPath*"]; then
-	if[-f "$sTheirDoc"]; then
+if [ "$sTheirDoc" != "$ProjectPath*" ]; then
+	if [ -f "$sTheirDoc" ]; then
 		IFS='/' read -a sourceArray <<< "$sTheirDoc"
-		if [-f "$ProjectPath${sourceArray[-1]}"]; then
-			echo "Cannot copy  $sTheirDoc  to  $ProjectPath ${sourceArray[-1]}  because the destination file exists."
+        mergeFile="${sourceArray[${#sourceArray[@]} - 1]}"
+		if [ -f "$ProjectPath${mergeFile}" ]; then
+			echo "Cannot copy  $sTheirDoc  to  $ProjectPath ${mergeFile}  because the destination file exists."
 		else
-			mv "$sTheirDoc" "$ProjectPath${sourceArray[-1]}"
+			mv -v "$sTheirDoc" "$ProjectPath${mergeFile}"
 		fi
 	fi
 fi
@@ -80,4 +88,6 @@ case "$(ps aux | grep $PROCESSNAME | wc -l)" in
 
 esac
 
-echo "$sMyDoc\n$sTheirDoc" > ..//Assets//merges.txt
+echo "$sMyDoc\n$sTheirDoc" > "$ProjectPath/Assets/merges.txt"
+
+echo "merge-unity.sh: DONE"
